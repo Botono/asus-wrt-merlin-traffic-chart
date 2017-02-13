@@ -31,10 +31,11 @@
   "content_scripts": [
     {
       "matches": [
-        "http://*/*",
-        "https://*/*"
+        "https://192.168.1.1:8443/Main_TrafficMonitor_devrealtime.asp"
       ],
       "js": [
+        "scripts/third_party/jquery.min.js",
+        "scripts/third_party/Chart.bundle.min.js",
         "scripts/contentscript.js"
       ],
       "run_at": "document_end",

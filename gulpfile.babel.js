@@ -6,6 +6,7 @@ import runSequence from 'run-sequence';
 import {stream as wiredep} from 'wiredep';
 
 const $ = gulpLoadPlugins();
+const appScriptsSrc = ['app/scripts.babel/**/*.js', '!app/scripts.babel/**/*.min.js'];
 
 gulp.task('extras', () => {
   return gulp.src([
@@ -28,7 +29,7 @@ function lint(files, options) {
   };
 }
 
-gulp.task('lint', lint('app/scripts.babel/**/*.js', {
+gulp.task('lint', lint(appScriptsSrc, {
   env: {
     es6: true
   }
