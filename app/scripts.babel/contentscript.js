@@ -26,7 +26,7 @@ function getTRData() {
         dataObj[rowData[0]] = rowData[1];
         $.extend(returnObj, dataObj)
       } else {
-        console.log('getTRData() found no data!');
+        //console.log('getTRData() found no data!');
       }
     });
   });
@@ -36,7 +36,7 @@ function getTRData() {
 }
 
 function padData(what, thisManyTimes, where) {
-  console.log('PADDING DATA: ' + what + ', '+ thisManyTimes+ ' times, because: '+ where);
+  //console.log('PADDING DATA: ' + what + ', '+ thisManyTimes+ ' times, because: '+ where);
   for (var i=0;i<thisManyTimes;i++) {
     Global_Data.data[what].push(0);
   }
@@ -59,7 +59,7 @@ function updateChartData(currentData, newData, newLabel) {
       for (var item in Global_Data.data) {
         // Found an existing entry, update its data plox
         if (item === ip) {
-          console.log('UPDATING: '+ item);
+          //console.log('UPDATING: '+ item);
           itemsUpdated.push(item);
           found = true;
           padNumber = howManyLabels-Global_Data.data[item].length;
@@ -71,7 +71,7 @@ function updateChartData(currentData, newData, newLabel) {
 
       // Entry not found, add it
       if (!found) {
-        console.log('ADDING: '+ ip);
+        //console.log('ADDING: '+ ip);
         Global_Data.data[ip] = [];
         padData(ip, howManyLabels, 'Add New');
 
@@ -81,10 +81,10 @@ function updateChartData(currentData, newData, newLabel) {
 
     }
 
-    console.log(itemsUpdated);
+    //console.log(itemsUpdated);
     for (var host in Global_Data.data) {
       if ( itemsUpdated.indexOf(host) === -1 ) {
-        console.log('NOT MODIFIED: '+ host);
+        //console.log('NOT MODIFIED: '+ host);
         padNumber = howManyLabels - Global_Data.data[host].length + 1;
         padData(host, padNumber, 'No Update');
       }
@@ -93,9 +93,10 @@ function updateChartData(currentData, newData, newLabel) {
 
   Global_Data.labels.push(newLabel);
 
-  //console.log(Global_Data);
-  console.log(Global_Data.labels);
-  console.table(Global_Data.data);
+
+  console.log(Global_Data.labels.length);
+  console.log(Global_Data.data[host].length);
+  // console.table([Global_Data.labels.length, Global_Data.data[host].length]);
   // Update the data object and return it
 
 
