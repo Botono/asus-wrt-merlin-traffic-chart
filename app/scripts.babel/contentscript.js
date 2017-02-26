@@ -1,7 +1,6 @@
 'use strict';
 
-var MAX_COLUMNS = 5;
-var update_count = 0;
+var MAX_COLUMNS = 20;
 /*
 {
   labels: [0,1,2,3,4,5,6],
@@ -11,7 +10,9 @@ var update_count = 0;
   }
 }
 */
-var Global_Data = {'labels': [], 'data': {}};
+var Global_Data = {};
+Global_Data.labels = [];
+Global_Data.data = {};
 
 function getTRData() {
   var returnObj = {};
@@ -42,6 +43,35 @@ function padData(what, thisManyTimes, where) {
   }
 }
 
+function updateDataObj(data) {
+  // data = {
+	//   labels : [],
+	// 	datasets : []
+  // }
+  var found;
+  var updatedItems = [];
+
+  data.labels = Global_Data.labels.slice(MAX_COLUMNS*-1);
+
+  for (var item in Global_Data.data) {
+    found = false;
+    for (var i=0;data.datasets[i];i++) {
+      if (data.datasets[i].label === item) {
+        found = true;
+        updatedItems.push(item);
+        data.datasets[i].data = Global_Data.data[item].slice(MAX_COLUMNS*-1);
+      }
+    }
+
+    if (!found) {
+      updatedItems.push(item);
+      data.datasets.push({label: item, data: Global_Data.data[item].slice(MAX_COLUMNS*-1) })
+    }
+  }
+
+  return data;
+}
+
 function updateChartData(currentData, newData, newLabel) {
   var newDataValue;
   var found;
@@ -53,11 +83,12 @@ function updateChartData(currentData, newData, newLabel) {
   if (!jQuery.isEmptyObject(newData)) {
 
     for (var ip in newData) {
-      newDataValue = newData[ip];
+      newDataValue = newData[ip].split(' ')[0];
       found = false;
-
+      ip = ip.trim();
       for (var item in Global_Data.data) {
         // Found an existing entry, update its data plox
+        item = item.trim();
         if (item === ip) {
           //console.log('UPDATING: '+ item);
           itemsUpdated.push(item);
@@ -82,6 +113,7 @@ function updateChartData(currentData, newData, newLabel) {
     }
 
     //console.log(itemsUpdated);
+    // Pad any existing hosts which were not otherwise updated this pass
     for (var host in Global_Data.data) {
       if ( itemsUpdated.indexOf(host) === -1 ) {
         //console.log('NOT MODIFIED: '+ host);
@@ -92,18 +124,13 @@ function updateChartData(currentData, newData, newLabel) {
   }
 
   Global_Data.labels.push(newLabel);
+  //console.log(Global_Data);
 
-
-  console.log(Global_Data.labels.length);
-  console.log(Global_Data.data[host].length);
-  // console.table([Global_Data.labels.length, Global_Data.data[host].length]);
-  // Update the data object and return it
-
-
-
-  update_count++;
+  currentData = updateDataObj(currentData);
   return currentData;
 }
+
+
 
 $(function() {
   var outputTableContainer = $('#bwm-details-grid');
@@ -117,13 +144,28 @@ $(function() {
 	  labels : [],
 		datasets : []
   };
+  var ctx;
+  var myChart;
   var count = 0;
-
-  // Hide the original table cuz it stupid
-  // outputTableContainer.hide();
+  var chartOptions = {
+    spanGaps: true,
+    animation: false,
+    backgroundColor: 'rgb(10,10,10)',
+  };
 
   // Insert chart canvas element
-  //outputTableContainer.before($canvas);
+  outputTableContainer.before($canvas);
+
+  ctx = $('#chart-container').get(0).getContext('2d');
+
+  myChart = new Chart(ctx, {
+      type: 'line',
+      data: data,
+      options: chartOptions
+  });
+
+  // Hide the original table cuz it stupid
+  outputTableContainer.hide();
 
   // create an observer instance
   var observer = new MutationObserver(function(mutations) {
@@ -133,9 +175,7 @@ $(function() {
 
       data = updateChartData(data, newData, count++);
 
-      //console.table([data.labels, data.datasets[0].data]);
-      //console.log('Labels: '+ data.labels.length + ' : Data: ' + data.datasets[0].data.length);
-      //console.log(data);
+      myChart.update();
 
     });
   });
