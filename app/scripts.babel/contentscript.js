@@ -2,7 +2,7 @@
 
 // GLOBALS
 var MAX_COLUMNS = 20;
-var color_palette = palette('tol', 12);
+var color_palette = palette('tol', 12).reverse(); // Reverse because pop()
 var host_counter = 0;
 var current_scale = 'KB';
 var scale_multipliers = {
@@ -10,9 +10,11 @@ var scale_multipliers = {
   'MB': 1000,
   'GB': 1000000
 };
+
 var Global_Data = {};
 Global_Data.labels = [];
-Global_Data.data = {};
+Global_Data.hosts = {};
+// END GLOBALS
 
 function hexToRGB(hex) {
   // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
@@ -27,6 +29,15 @@ function hexToRGB(hex) {
     g: parseInt(result[2], 16),
     b: parseInt(result[3], 16)
   } : null;
+}
+
+function isAllZeros(data) {
+  for (var idx in data) {
+    if (data[idx] > 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function getTRData() {
@@ -56,34 +67,52 @@ function getTRData() {
 function padData(what, thisManyTimes, where) {
   //console.log('PADDING DATA: ' + what + ', '+ thisManyTimes+ ' times, because: '+ where);
   for (var i = 0; i < thisManyTimes; i++) {
-    Global_Data.data[what].push(0);
+    Global_Data.hosts[what].data.push(0);
   }
 }
 
-function updateDataObj(data) {
+function updateChartData(data) {
   // data = {
   //   labels : [],
   // 	datasets : []
   // }
   var found;
+  var hostData;
+  var removeThisHost = false;
   var myPalette;
   var paletteRGB;
   var paletteRGBAplha;
 
   data.labels = Global_Data.labels.slice(MAX_COLUMNS * -1);
 
-  for (var item in Global_Data.data) {
+  for (var item in Global_Data.hosts) {
     found = false;
+    hostData = Global_Data.hosts[item].data.slice(MAX_COLUMNS * -1);
+
+    if (isAllZeros(hostData)) {
+      // If a host has zeros in all places in current view,
+      // it should be removed from the chart.
+      removeThisHost = true;
+    }
+
     for (var i = 0; data.datasets[i]; i++) {
       if (data.datasets[i].label === item) {
         found = true;
 
-        data.datasets[i].data = Global_Data.data[item].slice(MAX_COLUMNS * -1);
+        if (removeThisHost) {
+          // Host needs to be removed. Put its color back in the palette array
+          color_palette.push(Global_Data.hosts[item].color);
+          Global_Data.hosts[item].color = '';
+          data.datasets.splice(i, 1);
+        } else {
+          data.datasets[i].data = hostData;
+        }
       }
     }
 
-    if (!found) {
-      myPalette = hexToRGB(color_palette[host_counter++]);
+    if (!found && !removeThisHost) {
+      Global_Data.hosts[item].color = color_palette.pop();
+      myPalette = hexToRGB(Global_Data.hosts[item].color);
       paletteRGB = 'rgba(' + myPalette.r + ',' + myPalette.g + ',' + myPalette.b + ',1)';
       paletteRGBAplha = 'rgba(' + myPalette.r + ',' + myPalette.g + ',' + myPalette.b + ',0.5)';
 
@@ -93,7 +122,7 @@ function updateDataObj(data) {
         pointBorderColor: paletteRGB,
         pointStrokeColor: '#fff',
         label: item,
-        data: Global_Data.data[item].slice(MAX_COLUMNS * -1),
+        data: Global_Data.hosts[item].data.slice(MAX_COLUMNS * -1),
       });
     }
   }
@@ -101,7 +130,7 @@ function updateDataObj(data) {
   return data;
 }
 
-function updateChartData(currentData, newData, newLabel) {
+function updateGlobalData(currentData, newData, newLabel) {
   var newDataValue;
   var found;
   var newDataSet;
@@ -116,27 +145,31 @@ function updateChartData(currentData, newData, newLabel) {
 
       found = false;
       ip = ip.trim();
-      for (var item in Global_Data.data) {
+      for (var item in Global_Data.hosts) {
         // Found an existing entry, update its data plox
         item = item.trim();
         if (item === ip) {
           //console.log('UPDATING: '+ item);
           itemsUpdated.push(item);
           found = true;
-          padNumber = howManyLabels - Global_Data.data[item].length;
+          padNumber = howManyLabels - Global_Data.hosts[item].data.length;
           padData(item, padNumber, 'Update Existing');
 
-          Global_Data.data[item].push(newDataValue);
+          Global_Data.hosts[item].data.push(newDataValue);
         }
       }
 
       // Entry not found, add it
       if (!found) {
         //console.log('ADDING: '+ ip);
-        Global_Data.data[ip] = [];
+        Global_Data.hosts[ip] = {
+          'data': [],
+          'color': ''
+        };
+
         padData(ip, howManyLabels, 'Add New');
 
-        Global_Data.data[ip].push(newDataValue);
+        Global_Data.hosts[ip].data.push(newDataValue);
         itemsUpdated.push(ip);
       }
 
@@ -144,19 +177,24 @@ function updateChartData(currentData, newData, newLabel) {
 
     //console.log(itemsUpdated);
     // Pad any existing hosts which were not otherwise updated this pass
-    for (var host in Global_Data.data) {
+    for (var host in Global_Data.hosts) {
       if (itemsUpdated.indexOf(host) === -1) {
         //console.log('NOT MODIFIED: '+ host);
-        padNumber = howManyLabels - Global_Data.data[host].length + 1;
+        padNumber = howManyLabels - Global_Data.hosts[host].data.length + 1;
         padData(host, padNumber, 'No Update');
       }
+    }
+  } else {
+    // Empty object, pad all existing entries with 0
+    for (var host in Global_Data.hosts) {
+      padData(host, 1, 'No Data');
     }
   }
 
   Global_Data.labels.push(newLabel);
   //console.log(Global_Data);
 
-  currentData = updateDataObj(currentData);
+  currentData = updateChartData(currentData);
   return currentData;
 }
 
@@ -184,15 +222,23 @@ $(function() {
   var count = 0;
   var chartOptions = {
     spanGaps: true,
-    animation: {
-      duration: 500,
-      easing: 'linear'
-    },
+    animation: false,
     title: {
       display: true,
       text: 'Data Transferred Per IP in KB'
     },
     scales: {
+      yAxes: [{
+        ticks: {
+          callback: function(label, index, labels) {
+            if (label.toString().length > 6) {
+              return label.toFixed(2) +'KB';
+            } else {
+              return label +'KB';
+            }
+          }
+        },
+      }],
       xAxes: [{
         type: 'time',
         unit: 'second',
@@ -223,7 +269,7 @@ $(function() {
 
       newData = getTRData();
 
-      data = updateChartData(data, newData, Date.now());
+      data = updateGlobalData(data, newData, Date.now());
 
       myChart.update();
 
