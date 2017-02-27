@@ -36,6 +36,7 @@
       "js": [
         "scripts/third_party/jquery.min.js",
         "scripts/third_party/Chart.bundle.min.js",
+        "scripts/third_party/palette.min.js",
         "scripts/contentscript.js"
       ],
       "run_at": "document_end",
