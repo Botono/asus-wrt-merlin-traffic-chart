@@ -101,9 +101,15 @@ function updateChartData(data) {
 
         if (removeThisHost) {
           // Host needs to be removed. Put its color back in the palette array
+
           color_palette.push(Global_Data.hosts[item].color);
           Global_Data.hosts[item].color = '';
           data.datasets.splice(i, 1);
+          // console.warn('Removing '+ item);
+          // console.log('Palette:');
+          // console.log(color_palette)
+          // console.log('Datasets:');
+          // console.log(data.datasets);
         } else {
           data.datasets[i].data = hostData;
         }
@@ -111,6 +117,7 @@ function updateChartData(data) {
     }
 
     if (!found && !removeThisHost) {
+
       Global_Data.hosts[item].color = color_palette.pop();
       myPalette = hexToRGB(Global_Data.hosts[item].color);
       paletteRGB = 'rgba(' + myPalette.r + ',' + myPalette.g + ',' + myPalette.b + ',1)';
@@ -124,6 +131,11 @@ function updateChartData(data) {
         label: item,
         data: Global_Data.hosts[item].data.slice(MAX_COLUMNS * -1),
       });
+      // console.warn('Adding '+ item);
+      // console.log('Palette:');
+      // console.log(color_palette)
+      // console.log('Datasets:');
+      // console.log(data.datasets);
     }
   }
 
@@ -141,7 +153,7 @@ function updateGlobalData(currentData, newData, newLabel) {
   if (!jQuery.isEmptyObject(newData)) {
 
     for (var ip in newData) {
-      newDataValue = (parseFloat(newData[ip].split(' ')[0])) * scale_multipliers[current_scale];
+      newDataValue = (parseFloat(newData[ip].split(' ')[0].replace(',', ''))) * scale_multipliers[current_scale];
 
       found = false;
       ip = ip.trim();
